@@ -1,5 +1,6 @@
 from django.db import models
-from . import User
+from .product import Product
+from .user import User
 
 
 # 8. Discount
@@ -22,4 +23,3 @@ class Discount(models.Model):
 
     def __str__(self):
         return self.name
-

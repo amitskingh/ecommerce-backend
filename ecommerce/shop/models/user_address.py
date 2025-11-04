@@ -1,5 +1,5 @@
 from django.db import models
-from .__init__ import User
+from .user import User
 
 
 # 2. Address

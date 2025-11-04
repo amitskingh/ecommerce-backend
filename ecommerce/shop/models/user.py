@@ -3,7 +3,6 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth.models import AbstractUser
 from ..managers.managers import UserManager
 
-
 ROLE_CHOICES = [
     ("super_admin", "Super Admin"),
     ("admin", "Admin"),
@@ -11,7 +10,7 @@ ROLE_CHOICES = [
 ]
 
 
-# 2. Address
+# 1. User
 class User(AbstractUser):
 
     username = None
@@ -32,19 +31,15 @@ class User(AbstractUser):
         default="user",
     )
 
+    default_address = models.ForeignKey(
+        "Address",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="default_for_user",
+    )
+
     objects = UserManager()
 
     def __str__(self):
         return self.first_name + " " + self.last_name
-
-
-class Address(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="addresses")
-    street = models.CharField(max_length=255)
-    city = models.CharField(max_length=100)
-    state = models.CharField(max_length=100)
-    postal_code = models.CharField(max_length=20)
-    country = models.CharField(max_length=100)
-
-    def __str__(self):
-        return f"{self.street}, {self.city}, {self.state}, {self.country} - {self.postal_code}"

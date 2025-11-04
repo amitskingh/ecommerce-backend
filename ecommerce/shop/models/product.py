@@ -1,6 +1,9 @@
 from django.db import models
-from .__init__ import User, Category, Brand
 from django.utils.text import slugify
+
+from .category import Category
+from .product_brand import Brand
+from .user import User
 
 
 # 6. Product
@@ -29,40 +32,3 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
-
-
-# 6. ProductImage
-# One product can have multiple images
-# Product to ProductImage is One-to-Many
-class ProductImage(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    product = models.ForeignKey(
-        Product, on_delete=models.CASCADE, related_name="images"
-    )
-    image_url = models.URLField()  # or ImageField
-
-    def __str__(self):
-        return f"Image for {self.product.name}"
-
-
-# 7. ProductVariant
-# One product can have multiple variants (e.g., different sizes, colors)
-# Product to ProductVariant is One-to-Many
-class ProductVariant(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    product = models.ForeignKey(
-        Product, on_delete=models.CASCADE, related_name="variants"
-    )
-    sku = models.CharField(max_length=100, unique=True)
-    name = models.CharField(max_length=255)  # e.g., "Red - XL"
-    price = models.DecimalField(max_digits=12, decimal_places=2)
-    stock = models.PositiveIntegerField(default=0)
-
-    class Meta:
-        unique_together = (
-            "product",
-            "name",
-        )  # Optional: ensure unique variant names per product
-
-    def __str__(self):
-        return f"{self.product.name} - {self.name}"

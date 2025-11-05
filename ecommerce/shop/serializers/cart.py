@@ -3,6 +3,7 @@ from ..models import Cart, CartItem
 
 
 class CartItemSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = CartItem
         fields = [

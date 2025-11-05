@@ -10,6 +10,34 @@ class CartItemSerializer(serializers.ModelSerializer):
             "id",
             "product_variant",
             "quantity",
-            "price",
+            "subtotal",
         ]
+        read_only_fields = ["id"]
+
+
+class CartItemSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = CartItem
+        fields = [
+            "id",
+            "product_variant",
+            "quantity",
+            "subtotal",
+        ]
+        read_only_fields = ["id"]
+
+
+class CartSerializer(serializers.ModelSerializer):
+
+    items = CartItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Cart
+        fields = [
+            "id",
+            "user",
+            "items",
+        ]
+
         read_only_fields = ["id"]

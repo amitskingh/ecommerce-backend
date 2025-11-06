@@ -10,7 +10,7 @@ urlpatterns = [
     ),
     path(
         "webhook/",
-        PaymentProcessor.as_view(),
+        StripeWebhookView.as_view(),
         name="register_user",
     ),
 ]

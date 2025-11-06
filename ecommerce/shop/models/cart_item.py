@@ -3,6 +3,12 @@ from .product_variant import ProductVariant
 from .cart import Cart
 
 
+CART_STATUS = [
+    ("active", "Active"),
+    ("checked_out", "Checked Out"),
+]
+
+
 # 11. CartItem
 class CartItem(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -10,6 +16,8 @@ class CartItem(models.Model):
     product_variant = models.ForeignKey(ProductVariant, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(default=1)
     subtotal = models.DecimalField(max_digits=12, decimal_places=2, editable=False)
+
+    status = models.CharField(max_length=12, choices=CART_STATUS, default="active")
 
     def save(self, *args, **kwargs):
         self.subtotal = self.product_variant.price * self.quantity

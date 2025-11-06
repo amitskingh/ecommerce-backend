@@ -5,7 +5,7 @@ import json
 import os
 import stripe
 
-import decouple
+from decouple import config
 
 from rest_framework import status
 from rest_framework.response import Response
@@ -13,12 +13,12 @@ from rest_framework.views import APIView
 
 
 # This is your test secret API key.
-stripe.api_key = decouple.config("stripe_api_key")
+stripe.api_key = config("stripe_api_key")
 # Replace this endpoint secret with your endpoint's unique secret
 # If you are testing with the CLI, find the secret by running 'stripe listen'
 # If you are using an endpoint defined with the API or dashboard, look in your webhook settings
 # at https://dashboard.stripe.com/webhooks
-endpoint_secret = "whsec_..."
+endpoint_secret = config("whsecret_key")
 
 
 # @app.route("/webhook", methods=["POST"])
@@ -28,6 +28,8 @@ class StripeWebhookView(APIView):
     def post(self, request, format=None):
         event = None
         payload = request.data
+
+        print(payload)
 
         try:
             event = json.loads(payload)

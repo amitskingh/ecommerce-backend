@@ -13,5 +13,8 @@ class OrderItem(models.Model):
         max_digits=12, decimal_places=2
     )  # Snapshot of price at purchase
 
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
     def __str__(self):
         return f"{self.quantity} x {self.product_variant.name}"

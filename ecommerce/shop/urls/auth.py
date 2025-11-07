@@ -1,9 +1,12 @@
 from django.urls import path
+from django.urls import path
+from django.urls import path
 from ..views.auth import (
-    RegisterUserView,
     LoginUserView,
-    PasswordResetRequestView,
+    RegisterUserView,
     ResetPasswordView,
+    CurrentUserView,
+    PasswordResetRequestView,
 )
 
 urlpatterns = [
@@ -26,5 +29,10 @@ urlpatterns = [
         "auth/password-reset/<str:token>/",
         ResetPasswordView.as_view(),
         name="password_reset",
+    ),
+    path(
+        "profile/",
+        CurrentUserView.as_view(),
+        name="user_profile",
     ),
 ]

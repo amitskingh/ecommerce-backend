@@ -54,6 +54,7 @@ class ProductCreateSerializer(serializers.ModelSerializer):
             "base_price",
             "stock",
             "is_active",
+            "created_by",
         ]
         read_only_fields = ["id"]
 

@@ -45,7 +45,7 @@ class RegisterUserView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        user = User.objects.create_user(email=email, password=password)
+        user = User.objects.create_user(email=email, password=password, role=role)
         user.save()
 
         refresh = RefreshToken.for_user(user)
@@ -82,10 +82,14 @@ class LoginUserView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        user = authenticate(email=email, password=password)
+        user = authenticate(request, email=email, password=password)
+
+        print("User: ", user)
+        print("user role: ", user.role)
 
         if user and user.is_active:
             refresh = RefreshToken.for_user(user)
+            print("valid user: ", user.first_name)
 
             return Response(
                 {
@@ -158,7 +162,6 @@ class CurrentUserView(APIView):
         return Response(
             {
                 "id": user.id,
-                "email": user.email,
                 "email": user.email,
                 "first_name": user.first_name,
                 "last_name": user.last_name,

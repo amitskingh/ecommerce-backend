@@ -11,4 +11,4 @@ class BrandSerializer(serializers.ModelSerializer):
             "description",
             "logo",
         ]
-        read_only_fields = "id"
+        read_only_fields = ["id"]

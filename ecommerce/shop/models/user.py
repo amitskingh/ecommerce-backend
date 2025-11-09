@@ -4,9 +4,9 @@ from django.contrib.auth.models import AbstractUser
 from ..managers.managers import UserManager
 
 ROLE_CHOICES = [
-    ("super_admin", "Super Admin"),
     ("admin", "Admin"),
-    ("user", "User"),
+    ("seller", "Seller"),
+    ("customer", "Customer"),
 ]
 
 

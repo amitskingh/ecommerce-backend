@@ -1,34 +1,41 @@
-from rest_framework import permissions
+from rest_framework.permissions import BasePermission, SAFE_METHODS
 
 
-class IsSuperAdminUser(permissions.BasePermission):
-
+# 🧑‍💼 Admin-only access
+class IsAdminUser(BasePermission):
     def has_permission(self, request, view):
-        return (
-            request.user
-            and request.user.is_authenticated
-            and request.user.role == "super_admin"
-        )
+        return request.user.is_authenticated and request.user.role == "admin"
 
 
-class IsAdminUser(permissions.BasePermission):
-
+# 🧑‍🔧 Seller-only access
+class IsSellerUser(BasePermission):
     def has_permission(self, request, view):
-        return (
-            request.user
-            and request.user.is_authenticated
-            and request.user.role == "admin"
-        )
+        return request.user.is_authenticated and request.user.role == "seller"
 
 
-class IsUser(permissions.BasePermission):
-
+# 🧑‍🤝‍🧑 Customer-only access
+class IsCustomerUser(BasePermission):
     def has_permission(self, request, view):
-        return (
-            request.user
-            and request.user.is_authenticated
-            and request.user.role == "user"
-        )
+        return request.user.is_authenticated and request.user.role == "customer"
+
+
+# ✅ Admin or Seller access
+class IsAdminOrSeller(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role in [
+            "admin",
+            "seller",
+        ]
+
+
+# 👀 Read-only for everyone, but write access for admin/seller
+class ReadOnlyOrAdmin(BasePermission):
+    def has_permission(self, request, view):
+        if request.method in SAFE_METHODS:  # GET, HEAD, OPTIONS
+            return True
+        return request.user.is_authenticated and request.user.role in [
+            "admin",
+        ]
 
 
 class CustomPermissionMixin:

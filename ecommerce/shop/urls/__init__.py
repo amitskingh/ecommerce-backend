@@ -1,6 +1,14 @@
 from .auth import urlpatterns as auth_urlpatterns
 from .payment import urlpatterns as payment_urlpatterns
 from .product import urlpatterns as product_urlpatterns
+from .category import urlpatterns as category_urlpatterns
+from .brand import urlpatterns as brand_urlpatterns
 
 
-urlpatterns = auth_urlpatterns + payment_urlpatterns + product_urlpatterns
+urlpatterns = (
+    auth_urlpatterns
+    + payment_urlpatterns
+    + product_urlpatterns
+    + category_urlpatterns
+    + brand_urlpatterns
+)

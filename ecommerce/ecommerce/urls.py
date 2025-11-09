@@ -15,10 +15,34 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
+# ecommerce/urls.py   <-- make sure this is your root urls file
 from django.contrib import admin
 from django.urls import path, include
+from shop.utils.response_wrapper import success_response, error_response
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/", include("shop.urls")),
 ]
+
+
+# def custom_page_not_found(request, exception):
+#     # handler404 must accept (request, exception)
+#     return error_response(
+#         message="Endpoint not found",
+#         errors=None,
+#         status_code=404,
+#     )
+
+
+# def custom_server_error(request):
+#     # handler500 must accept only (request)
+#     return error_response(
+#         message="Internal server error",
+#         errors=None,
+#         status_code=500,
+#     )
+
+
+# handler404 = "ecommerce.urls.custom_page_not_found"
+# handler500 = "ecommerce.urls.custom_server_error"

@@ -1,10 +1,9 @@
 from rest_framework import serializers
 from ..models import Product
-
 from .product_variants import ProductVariantSerializer
 
 
-class ProductSerializer(serializers.ModelSerializer):
+class ProductListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
@@ -40,7 +39,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
         read_only_fields = ["id"]
 
 
-class ProductCreateSerializer(serializers.ModelSerializer):
+class ProductSerializer(serializers.ModelSerializer):
     created_by = serializers.HiddenField(default=serializers.CurrentUserDefault())
 
     class Meta:

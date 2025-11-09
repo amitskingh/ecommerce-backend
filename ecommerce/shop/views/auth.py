@@ -11,9 +11,12 @@ from ..serializers.password_reset import PasswordResetSerializer
 
 from rest_framework import generics
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
-import os
 from django.core.mail import send_mail
 from django.conf import settings
+
+from ..utils.response_wrapper import success_response, error_response
+
+from ..serializers.auth import RegisterUserSerializer, LoginUserSerializer
 
 
 class RegisterUserView(APIView):
@@ -22,78 +25,16 @@ class RegisterUserView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        email = request.data.get("email")
-        password = request.data.get("password")
-        role = request.data.get("role", "user")  # Default role is user
 
-        if not email or not password:
-            return Response(
-                {"error": "Email and password are required"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        serializer = RegisterUserSerializer(data=request.data)
 
-        if User.objects.filter(email=email).exists():
-            return Response(
-                {"error": "Email already exists"}, status=status.HTTP_400_BAD_REQUEST
-            )
+        if serializer.is_valid():
+            user = serializer.save()
 
-        # Validate role
-        valid_roles = ["super_admin", "admin", "user"]
-        if role not in valid_roles:
-            return Response(
-                {"error": f"Invalid role. Must be one of: {valid_roles}"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        user = User.objects.create_user(email=email, password=password, role=role)
-        user.save()
-
-        refresh = RefreshToken.for_user(user)
-
-        return Response(
-            {
-                "message": "User registered successfully",
-                "user": {
-                    "id": user.id,
-                    "email": user.email,
-                    "role": role,
-                },
-                "tokens": {
-                    "refresh": str(refresh),
-                    "access": str(refresh.access_token),
-                },
-            },
-            status=status.HTTP_201_CREATED,
-        )
-
-
-class LoginUserView(APIView):
-    """Login a user and return JWT tokens"""
-
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        email = request.data.get("email")
-        password = request.data.get("password")
-
-        if not email or not password:
-            return Response(
-                {"error": "Email and password are required"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        user = authenticate(request, email=email, password=password)
-
-        print("User: ", user)
-        print("user role: ", user.role)
-
-        if user and user.is_active:
             refresh = RefreshToken.for_user(user)
-            print("valid user: ", user.first_name)
 
-            return Response(
-                {
-                    "message": "Login successful",
+            return success_response(
+                data={
                     "user": {
                         "id": user.id,
                         "email": user.email,
@@ -104,11 +45,59 @@ class LoginUserView(APIView):
                         "access": str(refresh.access_token),
                     },
                 },
-                status=status.HTTP_200_OK,
+                message="User registered successfully",
+                status_code=status.HTTP_201_CREATED,
             )
 
-        return Response(
-            {"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED
+        return error_response(
+            message="User registration failed",
+            errors=serializer.errors,
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+class LoginUserView(APIView):
+    """Login a user and return JWT tokens"""
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+
+        serializer = LoginUserSerializer(data=request.data)
+
+        if serializer.is_valid():
+            email = serializer.validated_data["email"]
+            password = serializer.validated_data["password"]
+
+            user = authenticate(request, email=email, password=password)
+
+            print("User: ", user)
+            print("user role: ", user.role)
+
+            if user and user.is_active:
+                refresh = RefreshToken.for_user(user)
+                print("valid user: ", user.first_name)
+
+                return success_response(
+                    data={
+                        "user": {
+                            "id": user.id,
+                            "email": user.email,
+                            "role": user.role,
+                        },
+                        "tokens": {
+                            "refresh": str(refresh),
+                            "access": str(refresh.access_token),
+                        },
+                    },
+                    message="Login successful",
+                    status_code=status.HTTP_200_OK,
+                )
+
+        return error_response(
+            message="Invalid credentials",
+            errors="Invalid email or password",
+            status_code=status.HTTP_401_UNAUTHORIZED,
         )
 
 
@@ -121,21 +110,31 @@ class RefreshTokenView(APIView):
         refresh_token = request.data.get("refresh")
 
         if not refresh_token:
-            return Response(
-                {"error": "Refresh token is required"},
-                status=status.HTTP_400_BAD_REQUEST,
+
+            return success_response(
+                message="Refresh token is required",
+                errors="Refresh token is required",
+                status_code=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
             refresh = RefreshToken(refresh_token)
-            return Response(
-                {"access": str(refresh.access_token), "refresh": str(refresh)},
-                status=status.HTTP_200_OK,
+
+            return success_response(
+                data={
+                    "access": str(refresh.access_token),
+                    "refresh": str(refresh),
+                },
+                message="Token refreshed successfully",
+                status_code=status.HTTP_200_OK,
             )
+
         except Exception:
-            return Response(
-                {"error": "Invalid or expired refresh token"},
-                status=status.HTTP_401_UNAUTHORIZED,
+
+            return error_response(
+                message="Invalid refresh token",
+                errors="Invalid or expired refresh token",
+                status_code=status.HTTP_401_UNAUTHORIZED,
             )
 
 
@@ -145,9 +144,10 @@ class LogoutUserView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        return Response(
-            {"message": "Logout successful. Please delete the token on client side."},
-            status=status.HTTP_200_OK,
+
+        return success_response(
+            message="Logout successful",
+            status_code=status.HTTP_200_OK,
         )
 
 
@@ -159,15 +159,18 @@ class CurrentUserView(APIView):
     def get(self, request):
         user = request.user
 
-        return Response(
-            {
-                "id": user.id,
-                "email": user.email,
-                "first_name": user.first_name,
-                "last_name": user.last_name,
-                "role": user.role,
+        return success_response(
+            data={
+                "user": {
+                    "id": user.id,
+                    "email": user.email,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                    "role": user.role,
+                }
             },
-            status=status.HTTP_200_OK,
+            message="User data fetched successfully",
+            status_code=status.HTTP_200_OK,
         )
 
 
@@ -201,16 +204,16 @@ class PasswordResetRequestView(generics.GenericAPIView):
 
             send_mail(subject, message, email_from, recipient_list)
 
-            return Response(
-                {
-                    "success": "We have sent you a link to reset your password",
-                },
-                status=status.HTTP_200_OK,
+            return success_response(
+                message="Password reset link sent successfully",
+                status_code=status.HTTP_200_OK,
             )
+
         else:
-            return Response(
-                {"error": "User with credentials not found"},
-                status=status.HTTP_404_NOT_FOUND,
+            return error_response(
+                message="User with credentials not found",
+                errors="User with credentials not found",
+                status_code=status.HTTP_404_NOT_FOUND,
             )
 
 
@@ -227,12 +230,21 @@ class ResetPasswordView(generics.GenericAPIView):
         confirm_password = data["confirm_password"]
 
         if new_password != confirm_password:
-            return Response({"error": "Passwords do not match"}, status=400)
+
+            return error_response(
+                message="Passwords do not match",
+                errors="Passwords do not match",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
 
         reset_obj = PasswordReset.objects.filter(token=token).first()
 
         if not reset_obj:
-            return Response({"error": "Invalid token"}, status=400)
+            return error_response(
+                message="Invalid token",
+                errors="Invalid token",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
 
         user = User.objects.filter(email=reset_obj.email).first()
 
@@ -242,6 +254,15 @@ class ResetPasswordView(generics.GenericAPIView):
 
             reset_obj.delete()
 
-            return Response({"success": "Password updated"})
+            return success_response(
+                message="Password updated successfully",
+                status_code=status.HTTP_200_OK,
+            )
+
         else:
-            return Response({"error": "No user found"}, status=404)
+
+            return error_response(
+                message="No user found",
+                errors="No user found",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )

@@ -3,6 +3,7 @@ from .payment import urlpatterns as payment_urlpatterns
 from .product import urlpatterns as product_urlpatterns
 from .category import urlpatterns as category_urlpatterns
 from .brand import urlpatterns as brand_urlpatterns
+from .fine import urlpatterns as fine_urlpatterns
 
 
 urlpatterns = (
@@ -11,4 +12,5 @@ urlpatterns = (
     + product_urlpatterns
     + category_urlpatterns
     + brand_urlpatterns
+    + fine_urlpatterns
 )

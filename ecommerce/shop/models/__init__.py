@@ -14,6 +14,7 @@ from .order_item import OrderItem
 from .notification import Notification
 from .product_review import Review
 from .password_reset import PasswordReset
+from .fine import Fine
 
 
 __all__ = [
@@ -33,4 +34,5 @@ __all__ = [
     Notification,
     Review,
     PasswordReset,
+    Fine,
 ]

@@ -27,11 +27,11 @@ SECRET_KEY = "django-insecure-n&o56ft6-&$9_5rz$5d8gv_^66s8+#!6m^9z^98jll$v@rc_26
 DEBUG = True
 # DEBUG = False
 
-ALLOWED_HOSTS = []
-# ALLOWED_HOSTS = ["*"]
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:4200",
-# ]
+# ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5174",
+]
 
 AUTH_USER_MODEL = "shop.User"
 

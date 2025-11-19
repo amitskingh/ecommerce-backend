@@ -92,7 +92,7 @@ class PaymentProcessor(APIView):
                             "product_data": {
                                 "name": "T-Shirt",
                             },
-                            "unit_amount": 2500,  # $25.00
+                            "unit_amount": 250000,  # $2500.00
                         },
                         "quantity": 1,
                     },
@@ -100,7 +100,7 @@ class PaymentProcessor(APIView):
                 ],
                 mode="payment",  # or "subscription" if you're selling subscriptions
                 payment_intent_data={
-                    "application_fee_amount": 300,  # $3.00 platform fee (in cents)
+                    "application_fee_amount": 30000,  # $300.00 platform fee (in cents)
                     "transfer_data": {
                         "destination": account_id,
                     },

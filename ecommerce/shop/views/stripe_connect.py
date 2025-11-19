@@ -1,5 +1,6 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from ..permissions import IsSellerUser
 
 
 import stripe
@@ -8,12 +9,19 @@ from decouple import config
 
 
 class StripeConnectAccount(APIView):
+
+    permission_classes = [IsSellerUser]
+
     def post(self, request, format=None):
+
+        user = request.user
+
+        stripe.api_key = config("stripe_api_key")
 
         print(stripe.api_key)
 
-        email = request.data.get("email")
-        name = request.data.get("name")
+        email = user.email
+        name = user.first_name + " " + user.last_name
 
         print("INSIDE")
 

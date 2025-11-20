@@ -4,13 +4,13 @@ from django.shortcuts import get_object_or_404
 from ..models import Fine
 from ..serializers.fine import FineSerializer
 from ..utils.response_wrapper import success_response, error_response
-from ..permissions import ReadOnlyOrAdmin
+from ..permissions import ReadOnlyOrAdmin, IsAdminOrSeller
 
 
 class FineViewSet(ViewSet):
     """ViewSet for Fine model"""
 
-    permission_classes = [ReadOnlyOrAdmin]
+    permission_classes = [IsAdminOrSeller]
 
     def list(self, request):
         try:
@@ -31,7 +31,7 @@ class FineViewSet(ViewSet):
     def create(self, request):
         serializer = FineSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(stripe_account_id=request.user.stripe_account_id)
             return success_response(
                 message="Fine created successfully.",
                 data=serializer.data,

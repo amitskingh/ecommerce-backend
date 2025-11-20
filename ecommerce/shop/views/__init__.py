@@ -17,3 +17,4 @@ from .payment import PaymentProcessor
 from .product import ProductListView, ProductDetailView, ProductImageView
 from .stripe_connect import StripeConnectAccount
 from .webhook import StripeWebhookView
+from .user import UserStripeAccountUpdateView

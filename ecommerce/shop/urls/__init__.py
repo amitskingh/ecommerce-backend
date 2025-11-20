@@ -5,6 +5,7 @@ from .category import urlpatterns as category_urlpatterns
 from .brand import urlpatterns as brand_urlpatterns
 from .fine import urlpatterns as fine_urlpatterns
 
+from .user import urlpatterns as user_urlpatterns
 
 urlpatterns = (
     auth_urlpatterns
@@ -13,4 +14,5 @@ urlpatterns = (
     + category_urlpatterns
     + brand_urlpatterns
     + fine_urlpatterns
+    + user_urlpatterns
 )

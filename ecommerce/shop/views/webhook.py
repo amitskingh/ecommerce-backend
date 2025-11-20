@@ -1,15 +1,13 @@
-#! /usr/bin/env python3.6
-# Python 3.6 or newer required.
-
-import json
-import os
 import stripe
 
 from decouple import config
 
 from rest_framework import status
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from ..models import User, Fine
 
 
 # This is your test secret API key.
@@ -22,51 +20,89 @@ endpoint_secret = config("whsecret_key")
 
 
 # @app.route("/webhook", methods=["POST"])
-
-
 class StripeWebhookView(APIView):
-    def post(self, request, format=None):
-        event = None
-        payload = request.data
+    """
+    Stripe webhook view to handle various events.
+    """
 
-        print(payload)
+    permission_classes = [AllowAny]  # Webhooks must be publicly accessible
+
+    def post(self, request, format=None):
+        # Use request.body to get the raw, unparsed payload for signature verification
+        payload = request.body
+        sig_header = request.headers.get("stripe-signature")
+        event = None
 
         try:
-            event = json.loads(payload)
-        except json.decoder.JSONDecodeError as e:
-            print("Webhook error while parsing basic request." + str(e))
+            event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
+        except ValueError as e:
+            # Invalid payload
+            print(f"⚠️  Webhook error while parsing payload: {e}")
             return Response(
                 {"error": "Invalid payload"}, status=status.HTTP_400_BAD_REQUEST
             )
-            # return jsonify(success=False)
-        if endpoint_secret:
-            # Only verify the event if there is an endpoint secret defined
-            # Otherwise use the basic event deserialized with json
-            sig_header = request.headers.get("stripe-signature")
-            try:
-                event = stripe.Webhook.construct_event(
-                    payload, sig_header, endpoint_secret
-                )
-            except stripe.error.SignatureVerificationError as e:
-                print("⚠️  Webhook signature verification failed." + str(e))
+        except stripe.SignatureVerificationError as e:
+            # Invalid signature
+            print(f"⚠️  Webhook signature verification failed: {e}")
             return Response(
-                {"error": "Invalid payload"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "Invalid signature"}, status=status.HTTP_400_BAD_REQUEST
             )
 
         # Handle the event
-        if event and event["type"] == "payment_intent.succeeded":
-            payment_intent = event["data"]["object"]  # contains a stripe.PaymentIntent
-            print("Payment for {} succeeded".format(payment_intent["amount"]))
-            # Then define and call a method to handle the successful payment intent.
-            # handle_payment_intent_succeeded(payment_intent)
-        elif event["type"] == "payment_method.attached":
-            payment_method = event["data"]["object"]  # contains a stripe.PaymentMethod
-            # Then define and call a method to handle the successful attachment of a PaymentMethod.
-            # handle_payment_method_attached(payment_method)
+        if event["type"] == "checkout.session.completed":
+            session = event["data"]["object"]
+            print(f"Checkout session {session.id} was successful!")
+            self.handle_checkout_session(session)
+
+        elif event["type"] == "account.updated":
+            account = event["data"]["object"]
+            print(f"Stripe Connect account {account.id} was updated.")
+            self.handle_account_updated(account)
+
         else:
             # Unexpected event type
             print("Unhandled event type {}".format(event["type"]))
 
-            return Response(
-                {"error": "Invalid payload"}, status=status.HTTP_400_BAD_REQUEST
+        # Return a 200 response to acknowledge receipt of the event
+        return Response({"status": "success"}, status=status.HTTP_200_OK)
+
+    def handle_checkout_session(self, session):
+        """
+        Handles the logic for a completed checkout session.
+        """
+        # Example: Check metadata to see if this was a fine payment
+        if session.metadata.get("payment_for") == "fine":
+            fine_id = session.metadata.get("fine_id")
+            try:
+                fine = Fine.objects.get(id=fine_id)
+                if fine.status == "pending":
+                    fine.status = "paid"
+                    fine.save()
+                    print(f"Fine {fine_id} marked as paid.")
+                else:
+                    print(f"Fine {fine_id} was already processed.")
+            except Fine.DoesNotExist:
+                print(f"ERROR: Fine with id={fine_id} not found.")
+
+    def handle_account_updated(self, account):
+        """
+        Handles updates to a connected Stripe account.
+        """
+        try:
+            user = User.objects.get(stripe_account_id=account.id)
+            user.charges_enabled = account.charges_enabled
+            user.payouts_enabled = account.payouts_enabled
+            user.details_submitted = account.details_submitted
+            # Convert StripeObjects to dicts before saving to JSONField
+            user.requirements = (
+                account.requirements.to_dict_recursive() if account.requirements else {}
+            )
+            user.capabilities = (
+                account.capabilities.to_dict_recursive() if account.capabilities else {}
+            )
+            user.save()
+            print(f"Updated user {user.email} with Stripe account status.")
+        except User.DoesNotExist:
+            print(
+                f"ERROR: Received account.updated webhook for non-existent user with stripe_account_id={account.id}"
             )

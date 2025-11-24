@@ -210,7 +210,7 @@ class FinePaymentSuccess(APIView):
             )
 
         return success_response(
-            message="Fine payment cancelled.",
+            message="Fine payment successful.",
             data={"fine_id": pk, "status": "cancelled"},
             status_code=status.HTTP_200_OK,
         )

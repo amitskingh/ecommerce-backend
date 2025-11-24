@@ -1,4 +1,5 @@
 import stripe
+import logging
 
 from decouple import config
 
@@ -9,7 +10,9 @@ from rest_framework.views import APIView
 
 from ..models import User, Fine
 
+logger = logging.getLogger(__name__)
 
+# This is your test secret API key.
 # This is your test secret API key.
 stripe.api_key = config("stripe_api_key")
 # Replace this endpoint secret with your endpoint's unique secret
@@ -37,13 +40,13 @@ class StripeWebhookView(APIView):
             event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
         except ValueError as e:
             # Invalid payload
-            print(f"⚠️  Webhook error while parsing payload: {e}")
+            logger.warning(f"Webhook error while parsing payload: {e}")
             return Response(
                 {"error": "Invalid payload"}, status=status.HTTP_400_BAD_REQUEST
             )
         except stripe.SignatureVerificationError as e:
             # Invalid signature
-            print(f"⚠️  Webhook signature verification failed: {e}")
+            logger.warning(f"Webhook signature verification failed: {e}")
             return Response(
                 {"error": "Invalid signature"}, status=status.HTTP_400_BAD_REQUEST
             )
@@ -51,17 +54,18 @@ class StripeWebhookView(APIView):
         # Handle the event
         if event["type"] == "checkout.session.completed":
             session = event["data"]["object"]
-            print(f"Checkout session {session.id} was successful!")
+            logger.info(f"Checkout session {session.id} was successful!")
+            print(session)
             self.handle_checkout_session(session)
 
         elif event["type"] == "account.updated":
             account = event["data"]["object"]
-            print(f"Stripe Connect account {account.id} was updated.")
+            logger.info(f"Stripe Connect account {account.id} was updated.")
             self.handle_account_updated(account)
 
         else:
             # Unexpected event type
-            print("Unhandled event type {}".format(event["type"]))
+            logger.info("Unhandled event type {}".format(event["type"]))
 
         # Return a 200 response to acknowledge receipt of the event
         return Response({"status": "success"}, status=status.HTTP_200_OK)
@@ -70,19 +74,43 @@ class StripeWebhookView(APIView):
         """
         Handles the logic for a completed checkout session.
         """
+        # Log the metadata from the completed checkout session
+        logger.info(f"Checkout session metadata: {session.metadata}")
+
+        payment_intent_id = session.get("payment_intent")
+
         # Example: Check metadata to see if this was a fine payment
         if session.metadata.get("payment_for") == "fine":
             fine_id = session.metadata.get("fine_id")
+            if not fine_id:
+                logger.error(
+                    "`fine_id` not found in session metadata for fine payment."
+                )
+                return
+
             try:
                 fine = Fine.objects.get(id=fine_id)
-                if fine.status == "pending":
+
+                # Idempotency check: ensure we haven't processed this before
+                if fine.payment_intent_id == payment_intent_id:
+                    logger.info(
+                        f"Fine {fine_id} has already been processed for payment intent {payment_intent_id}."
+                    )
+                    return
+
+                if fine.status != "paid":
                     fine.status = "paid"
+                    fine.payment_intent_id = payment_intent_id
                     fine.save()
-                    print(f"Fine {fine_id} marked as paid.")
+                    logger.info(f"Fine {fine_id} marked as paid.")
                 else:
-                    print(f"Fine {fine_id} was already processed.")
+                    logger.warning(
+                        f"Fine {fine_id} was already marked as paid, but with a different payment intent."
+                    )
             except Fine.DoesNotExist:
-                print(f"ERROR: Fine with id={fine_id} not found.")
+                logger.error(
+                    f"Fine with id={fine_id} not found for completed checkout session."
+                )
 
     def handle_account_updated(self, account):
         """
@@ -101,8 +129,8 @@ class StripeWebhookView(APIView):
                 account.capabilities.to_dict_recursive() if account.capabilities else {}
             )
             user.save()
-            print(f"Updated user {user.email} with Stripe account status.")
+            logger.info(f"Updated user {user.email} with Stripe account status.")
         except User.DoesNotExist:
-            print(
-                f"ERROR: Received account.updated webhook for non-existent user with stripe_account_id={account.id}"
+            logger.error(
+                f"Received account.updated webhook for non-existent user with stripe_account_id={account.id}"
             )
